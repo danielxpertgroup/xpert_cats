@@ -11,12 +11,19 @@ import {
 import { BreedsService } from './breeds.service';
 import { CreateBreedDto } from './dto/create-breed.dto';
 import { UpdateBreedDto } from './dto/update-breed.dto';
+import { ApiBody, ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 
 @Controller('breeds')
 export class BreedsController {
   constructor(private readonly breedsService: BreedsService) {}
 
   @Post()
+  @ApiOperation({ summary: 'Create a new breed of cat' })
+  @ApiBody({ type: CreateBreedDto })
+  @ApiOkResponse({
+    description: 'The cat has been successfully created.',
+    type: CreateBreedDto,
+  })
   create(@Body() createBreedDto: CreateBreedDto) {
     return this.breedsService.create(createBreedDto);
   }

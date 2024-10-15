@@ -1,65 +1,91 @@
 import {
+  BadRequestException,
   HttpException,
   HttpStatus,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { CreateBreedDto } from './dto/create-breed.dto';
 import { UpdateBreedDto } from './dto/update-breed.dto';
 import axios from 'axios';
-import { v4 as uuid } from 'uuid';
 import { Breed } from './entities/breed.entity';
+import { InjectModel } from '@nestjs/mongoose';
+import { isValidObjectId, Model } from 'mongoose';
 
 @Injectable()
 export class BreedsService {
   private breeds: Breed[] = [];
   private readonly apiUrl = process.env.CAT_API_URL;
   private readonly apiKey = process.env.CAT_API_KEY;
-  create(createBreedDto: CreateBreedDto) {
-    const { name } = createBreedDto;
 
-    const breed: Breed = {
-      breed_id: uuid(),
-      name: name.toLowerCase(),
-      origin: '',
-      life_span: '',
-      temperament: '',
-      createdAT: new Date().getTime(),
-    };
+  constructor(
+    @InjectModel(Breed.name)
+    private readonly breedModel: Model<Breed>,
+  ) {
+    console.log('BreedModel Injected:', !!breedModel);
+  }
+  async create(createBreedDto: CreateBreedDto) {
+    createBreedDto.name = createBreedDto.name.toLocaleLowerCase();
 
-    this.breeds.push(breed);
-
-    return breed;
+    try {
+      const breed = await this.breedModel.create(createBreedDto);
+      return breed;
+    } catch (error) {
+      this.handleExceptions(error);
+    }
   }
 
   findAll() {
     return this.breeds;
   }
 
-  findOne(id: string) {
-    const breed = this.breeds.find((breed) => breed.breed_id === id);
-    if (!breed) throw new NotFoundException(`breed with id "${id}" not found`);
+  async findOne(term: string) {
+    let breed: Breed;
+
+    if (!isNaN(+term)) {
+      breed = await this.breedModel.findOne({ no: term });
+    }
+
+    // MongoID
+    if (!breed && isValidObjectId(term)) {
+      breed = await this.breedModel.findById(term);
+    }
+
+    // Name
+    if (!breed) {
+      breed = await this.breedModel.findOne({
+        name: term.toLowerCase().trim(),
+      });
+    }
+
+    if (!breed)
+      throw new NotFoundException(
+        `Breed with id, name or no "${term}" not found`,
+      );
 
     return breed;
   }
 
-  update(id: string, updateBreedDto: UpdateBreedDto) {
-    let breedDB = this.findOne(id);
+  async update(term: string, updateBreedDto: UpdateBreedDto) {
+    const breed = await this.findOne(term);
 
-    this.breeds = this.breeds.map((brand) => {
-      if (brand.breed_id === id) {
-        breedDB.updatedAt = new Date().getTime();
-        breedDB = { ...breedDB, ...updateBreedDto };
-        return breedDB;
-      }
-      return brand;
-    });
+    if (updateBreedDto.name)
+      updateBreedDto.name = updateBreedDto.name.toLowerCase();
 
-    return breedDB;
+    try {
+      await breed.updateOne(updateBreedDto);
+      return { ...breed.toJSON(), ...updateBreedDto };
+    } catch (error) {
+      this.handleExceptions(error);
+    }
   }
 
-  remove(id: string) {
-    this.breeds = this.breeds.filter((breed) => breed.breed_id !== id);
+  async remove(id: string) {
+    const { deletedCount } = await this.breedModel.deleteOne({ _id: id });
+    if (deletedCount === 0)
+      throw new BadRequestException(`Breed with id "${id}" not found`);
+    return;
   }
 
   // Obtener razas de gatos
@@ -75,5 +101,16 @@ export class BreedsService {
         HttpStatus.BAD_REQUEST,
       );
     }
+  }
+  private handleExceptions(error: any) {
+    if (error.code === 11000) {
+      throw new BadRequestException(
+        `Breed exists in db ${JSON.stringify(error.keyValue)}`,
+      );
+    }
+    console.log(error);
+    throw new InternalServerErrorException(
+      `Can't create Breed - Check server logs`,
+    );
   }
 }

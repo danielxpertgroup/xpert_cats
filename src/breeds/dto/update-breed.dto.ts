@@ -5,7 +5,7 @@ import { IsString, MinLength } from 'class-validator';
 export class UpdateBreedDto extends PartialType(CreateBreedDto) {
   @IsString()
   @MinLength(1)
-  readonly name: string;
+  name: string;
   @IsString()
   @MinLength(1)
   readonly origin: string;

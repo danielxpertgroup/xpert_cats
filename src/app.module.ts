@@ -5,26 +5,19 @@ import { BreedsModule } from './breeds/breeds.module';
 import { BreedImagesModule } from './breed_images/breed_images.module';
 import { UsersModule } from './users/users.module';
 import { ConfigModule } from '@nestjs/config';
-import { UsersService } from './users/users.service';
-import { BreedsService } from './breeds/breeds.service';
-import { BreedImagesService } from './breed_images/breed_images.service';
+import { MongooseModule } from '@nestjs/mongoose';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    MongooseModule.forRoot(process.env.MONGO_DB),
     BreedsModule,
     BreedImagesModule,
     UsersModule,
   ],
   controllers: [AppController],
-  providers: [
-    AppService,
-    BreedsService,
-    UsersService,
-    BreedImagesService,
-    UsersService,
-  ],
+  providers: [AppService],
 })
 export class AppModule {}
