@@ -22,7 +22,7 @@ async function bootstrap() {
     .build();
 
   app.enableCors({
-    origin: 'http://localhost:4200', // Cambia según la URL de tu front-end
+    origin: 'http://localhost:4200',
     methods: 'GET,POST,DELETE,PUT',
   });
 

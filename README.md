@@ -14,7 +14,13 @@
    npm i -g @nestjs/cli
    ```
 
-4. Start the database:
+4. Rename the file .env.template:
+
+   ```bash
+   .env
+   ```
+
+5. Start the database:
    ```bash
    docker-compose up -d
    ```
